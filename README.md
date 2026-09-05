@@ -43,11 +43,13 @@ flowchart TD
     B -->|Manual cleaning\nstandardize columns| C[data/raw/\nsdoh_dataset_employment_inflation.csv\nsdoh_dataset_with_unemployment.csv]
     C -->|notebooks/analysis.ipynb\nmerge + IQR cap + save| D[data/processed/\nwith_unemployment_processed.csv]
     D -->|data_preprocessing.py| E[Feature Engineering\nlag + rolling + cyclical + ratios]
-    E -->|36-month sequences\nStandardScaler| F[X_sequences.npy\ny_target.npy\nregions.npy]
-    F -->|model_training.py\nper-county 70/15/15 split| G[Training Data\n6098 samples]
-    G -->|Block A| H[XGBoost Model\nxgb_model.pkl\nMAE=0.0325 RMSE=0.0402]
-    G -->|Block B| I[LSTM Model\ner_lstm_model.keras\nMAE=0.0961 RMSE=0.1351]
-    H --> J[analysis.py\nSHAP + per-county plots]
+    E -->|36-month sequences\nunscaled| F[X_sequences.npy\ny_target.npy\nregions.npy]
+    F -->|model_training.py\nper-county 70/15/15\nscaler fit on train only| G[Training Data\n~6098 samples]
+    G -->|Naive persistence| N[Naive lag-1 Baseline\npredict next = current\nMAE=0.5083 RMSE=0.8573]
+    G -->|Block A| H[XGBoost Model\nxgb_model.pkl\nMAE=0.0325 pp 15.6x vs baseline]
+    G -->|Block B| I[LSTM Model\ner_lstm_model.keras\nMAE=0.0961 pp 5.3x vs baseline]
+    N --> J
+    H --> J[analysis.py\nSHAP on held-out test set\n+ per-county plots]
     I --> J
     J --> K[shap_summary.png\nmodel_comparison_bars.png\ncounty_*.png]
     H --> L[app.py\nStreamlit Dashboard]
@@ -254,18 +256,23 @@ flowchart TD
 
 ```mermaid
 flowchart LR
+    subgraph Baseline
+        A0[Naive lag-1\npredict next = current\nno training needed]
+        A0 --> D0[Output\nMAE=0.5083 pp\nRMSE=0.8573 pp]
+    end
     subgraph XGBoost
-        A1[Input\n8712 × 972\nflattened sequences] --> B1[500 Decision Trees\ndepth=4\nlr=0.05]
+        A1["Input\n~6098 × 1008\nflattened sequences"] --> B1[500 Decision Trees\ndepth=4\nlr=0.05]
         B1 --> C1[Early stopping\n20 rounds\nval MAE]
-        C1 --> D1[Output\nMAE=0.0325\nRMSE=0.0402]
+        C1 --> D1[Output\nMAE=0.0325 pp\nRMSE=0.0402 pp]
     end
     subgraph LSTM
-        A2[Input\n8712 × 36 × 27\n3D sequences] --> B2[LSTM 64\nreturn_sequences=True\nDropout 0.2]
+        A2["Input\n~6098 × 36 × 28\n3D sequences"] --> B2[LSTM 64\nreturn_sequences=True\nDropout 0.2]
         B2 --> C2[LSTM 32\nDropout 0.2]
         C2 --> D2[Dense 1]
-        D2 --> E2[Output\nMAE=0.0961\nRMSE=0.1351]
+        D2 --> E2[Output\nMAE=0.0961 pp\nRMSE=0.1351 pp]
     end
-    D1 --> F[Winner: XGBoost\n3x lower MAE\nfaster training]
+    D0 --> F[Winner: XGBoost\n15.6x lower MAE than baseline\n3x lower MAE than LSTM]
+    D1 --> F
     E2 --> F
 ```
 
