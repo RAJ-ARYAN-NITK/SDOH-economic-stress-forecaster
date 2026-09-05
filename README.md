@@ -3,7 +3,7 @@
 > Forecasting county-level unemployment as a public health stress indicator across 11 Massachusetts counties using 10 years of Social Determinants of Health (SDOH) data — built with XGBoost, LSTM, and SHAP explainability.
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
-[![XGBoost](https://img.shields.io/badge/XGBoost-R²%3D0.60-brightgreen)](https://xgboost.readthedocs.io)
+[![XGBoost](https://img.shields.io/badge/XGBoost-MAE%3D0.0325-brightgreen)](https://xgboost.readthedocs.io)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Live%20Demo-red)](https://sdoh-er-predictorgit-mhgx4s6sibltmvtcmbwuw3.streamlit.app/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
@@ -19,10 +19,10 @@ The model ingests 10 years of monthly employment, inflation, and labor force dat
 
 ## Results
 
-| Model | MAE | RMSE | R² |
-|-------|-----|------|-----|
-| **XGBoost** | **0.0325** | **0.0402** | **0.9998** |
-| LSTM | 0.0961 | 0.1351 | 0.9974 |
+| Model | MAE | RMSE |
+|-------|-----|------|
+| **XGBoost** | **0.0325** | **0.0402** |
+| LSTM | 0.0961 | 0.1351 |
 
 XGBoost outperforms LSTM by **3x on MAE** — demonstrating that gradient boosting outperforms deep learning on structured tabular time-series with moderate data size. Both models successfully capture the two major unemployment spikes (COVID-19 2020, subsequent surge) and recovery patterns.
 
@@ -40,8 +40,8 @@ flowchart TD
     D -->|data_preprocessing.py| E[Feature Engineering\nlag + rolling + cyclical + ratios]
     E -->|36-month sequences\nStandardScaler| F[X_sequences.npy\ny_target.npy\nregions.npy]
     F -->|model_training.py\nper-county 70/15/15 split| G[Training Data\n6098 samples]
-    G -->|Block A| H[XGBoost Model\nxgb_model.pkl\nMAE=0.0325 R²=0.9998]
-    G -->|Block B| I[LSTM Model\ner_lstm_model.keras\nMAE=0.0961 R²=0.9974]
+    G -->|Block A| H[XGBoost Model\nxgb_model.pkl\nMAE=0.0325 RMSE=0.0402]
+    G -->|Block B| I[LSTM Model\ner_lstm_model.keras\nMAE=0.0961 RMSE=0.1351]
     H --> J[analysis.py\nSHAP + per-county plots]
     I --> J
     J --> K[shap_summary.png\nmodel_comparison_bars.png\ncounty_*.png]
@@ -242,7 +242,7 @@ flowchart TD
     C --> F[model.fit\nXGBoost + LSTM]
     D --> F
     D --> G[Early stopping\nval_loss monitor]
-    E --> H[Evaluate\nMAE RMSE R²\nper county]
+    E --> H[Evaluate\nMAE RMSE\nper county]
     note1[Previous global split:\nonly 2 counties in test set ✗] -.->|Fixed by| B
 ```
 
@@ -253,13 +253,13 @@ flowchart LR
     subgraph XGBoost
         A1[Input\n8712 × 972\nflattened sequences] --> B1[500 Decision Trees\ndepth=4\nlr=0.05]
         B1 --> C1[Early stopping\n20 rounds\nval MAE]
-        C1 --> D1[Output\nMAE=0.0325\nR²=0.9998]
+        C1 --> D1[Output\nMAE=0.0325\nRMSE=0.0402]
     end
     subgraph LSTM
         A2[Input\n8712 × 36 × 27\n3D sequences] --> B2[LSTM 64\nreturn_sequences=True\nDropout 0.2]
         B2 --> C2[LSTM 32\nDropout 0.2]
         C2 --> D2[Dense 1]
-        D2 --> E2[Output\nMAE=0.0961\nR²=0.9974]
+        D2 --> E2[Output\nMAE=0.0961\nRMSE=0.1351]
     end
     D1 --> F[Winner: XGBoost\n3x lower MAE\nfaster training]
     E2 --> F
@@ -293,7 +293,7 @@ flowchart TD
     B --> C[Load regions_test.npy\nfilter mask for county]
     C --> D[Plot y_test filtered\ny_pred_xgb filtered\ny_pred_lstm filtered]
     D --> E[Chart: True vs Predicted\nfor selected county only]
-    A --> F[Model comparison table\nXGBoost vs LSTM\nMAE RMSE R²]
+    A --> F[Model comparison table\nXGBoost vs LSTM\nMAE RMSE]
     A --> G[SHAP panel\nTop SDOH features\nby importance]
     A --> H[Raw data expander\nlast 24 months\nfor selected county]
     E --> I[Each county looks\ngenuinely different\nSuffolk vs Worcester\nvs Nantucket]
@@ -337,9 +337,9 @@ MA SDOH Economic Stress Forecaster | Python, XGBoost, LSTM, SHAP, Streamlit
   across 11 Massachusetts counties including cyclical time encoding,
   multi-lag rolling statistics, and SDOH economic ratios
 
-• Compared XGBoost vs LSTM; XGBoost achieved R²=0.9998 and 3x lower MAE,
-  demonstrating gradient boosting outperforms deep learning on structured
-  tabular time-series at moderate data scale
+• Compared XGBoost vs LSTM; XGBoost achieved 3x lower MAE (0.0325 vs 0.0961)
+  and 3x lower RMSE, demonstrating gradient boosting outperforms deep learning
+  on structured tabular time-series at moderate data scale
 
 • Applied SHAP explainability to identify medical_care_affordability as
   the strongest leading indicator of unemployment stress, ahead of energy
