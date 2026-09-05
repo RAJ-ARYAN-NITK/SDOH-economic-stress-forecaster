@@ -19,14 +19,19 @@ The model ingests 10 years of monthly employment, inflation, and labor force dat
 
 ## Results
 
-| Model | MAE | RMSE |
-|-------|-----|------|
-| **XGBoost** | **0.0325** | **0.0402** |
-| LSTM | 0.0961 | 0.1351 |
+> **Target scale:** unemployment rate stored as a percentage (e.g. `4.5` = 4.5%). All errors are in **percentage points (pp)**.
 
-XGBoost outperforms LSTM by **3x on MAE** — demonstrating that gradient boosting outperforms deep learning on structured tabular time-series with moderate data size. Both models successfully capture the two major unemployment spikes (COVID-19 2020, subsequent surge) and recovery patterns.
+| Model | MAE (pp) | RMSE (pp) | vs. Naive baseline |
+|-------|----------|-----------|---------------------|
+| Naive lag-1 (persistence) | 0.5083 | 0.8573 | — |
+| LSTM | 0.0961 | 0.1351 | 5.3× better |
+| **XGBoost** | **0.0325** | **0.0402** | **15.6× better** |
 
-**Key SHAP finding:** `medical_care_affordability` (ratio of medical CPI to overall CPI) is the strongest leading indicator of unemployment stress — ahead of energy costs and labor force participation rate. This suggests that healthcare cost inflation precedes employment deterioration in Massachusetts counties.
+All metrics are on the **held-out chronological test set** (last 15% of each county's timeline). The naive lag-1 baseline predicts "next month = this month" — the standard persistence benchmark for time-series. XGBoost achieves **15.6× lower MAE** than this baseline (0.0325 pp vs. 0.5083 pp), confirming the model has learned genuine patterns beyond simple autocorrelation.
+
+Both models successfully capture the COVID-19 unemployment spike (2020) and recovery. XGBoost outperforms LSTM by **3× on MAE**, confirming gradient boosting's edge over sequence models on low-volume, high-feature tabular data.
+
+**Key SHAP finding:** `medical_care_affordability` (ratio of medical CPI to overall CPI) is the strongest leading indicator of unemployment stress — ahead of energy costs and labor force participation rate. SHAP values computed on the held-out test set (first 200 samples of test split).
 
 ---
 
@@ -160,21 +165,20 @@ Run `backend/ml/data_preprocessing.py` to:
 - Create rolling statistics (mean and std for 3, 6, 12 month windows)
 - Engineer SDOH ratios (medical_care_affordability, housing_energy_ratio)
 - Build 36-month LSTM sequences
-- Scale with StandardScaler
-- Save `X_sequences.npy`, `y_target.npy`, `regions.npy`
+- Save **unscaled** `X_sequences.npy`, `y_target.npy`, `regions.npy` — scaling is deferred to Step 4 to prevent leakage
 
 ### Step 4 — Model Training
 Run `backend/ml/model_training.py` to:
-- Split each county 70/15/15 chronologically (per-county to ensure all counties appear in test set)
-- Train XGBoost (500 trees, early stopping, MAE metric)
-- Train LSTM (64→32 units, dropout, early stopping)
-- Compare both models and save results
-- Save `xgb_model.pkl`, `er_lstm_model.keras`, `regions_test.npy`
+- Split each county **70/15/15 chronologically** (per-county so all 11 counties appear in train, val, and test)
+- Fit `StandardScaler` **on the training split only**, then transform val/test — no leakage from future data
+- Train XGBoost (500 trees, early stopping on val MAE, patience 20 rounds)
+- Train LSTM (64→32 units, Dropout 0.2, early stopping on val loss, patience 10)
+- Save `xgb_model.pkl`, `er_lstm_model.keras`, `scaler.pkl`, `regions_test.npy`
 
 ### Step 5 — Analysis
 Run `backend/ml/analysis.py` to:
 - Generate per-county true vs predicted plots
-- Compute SHAP values (200 sample subset for speed)
+- Compute SHAP values on the **held-out test set** (first 200 samples for speed — no training data used)
 - Save SHAP summary and waterfall charts
 - Save model comparison bar charts
 
@@ -333,20 +337,20 @@ streamlit run app.py
 ```
 MA SDOH Economic Stress Forecaster | Python, XGBoost, LSTM, SHAP, Streamlit
 
-• Engineered 27+ features from 10 years of BLS employment and CPI data
-  across 11 Massachusetts counties including cyclical time encoding,
-  multi-lag rolling statistics, and SDOH economic ratios
+• Engineered 27+ features from 10 years of BLS employment/CPI data across
+  11 Massachusetts counties (cyclical time encoding, lag 1/3/6/12,
+  rolling stats, SDOH ratios); per-county chronological 70/15/15 split
+  with scaler fit on train-only to prevent data leakage
 
-• Compared XGBoost vs LSTM; XGBoost achieved 3x lower MAE (0.0325 vs 0.0961)
-  and 3x lower RMSE, demonstrating gradient boosting outperforms deep learning
-  on structured tabular time-series at moderate data scale
+• Benchmarked XGBoost vs LSTM against a naive lag-1 persistence baseline
+  (MAE=0.5083 pp); XGBoost achieved MAE=0.0325 pp (15.6x lower than baseline,
+  3x lower than LSTM), confirming gradient boosting's edge on structured tabular
+  time-series at moderate data scale
 
-• Applied SHAP explainability to identify medical_care_affordability as
-  the strongest leading indicator of unemployment stress, ahead of energy
-  costs and labor force participation rate
-
-• Deployed interactive per-county forecast dashboard to Streamlit Cloud
-  with SHAP waterfall charts explaining individual predictions
+• Applied SHAP on the held-out test set to identify medical_care_affordability
+  as the strongest leading indicator of unemployment stress — ahead of energy
+  costs and labor force participation rate; deployed per-county Streamlit Cloud
+  dashboard with SHAP waterfall charts explaining individual predictions
 ```
 
 ---
