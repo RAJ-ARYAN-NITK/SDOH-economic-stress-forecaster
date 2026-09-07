@@ -13,7 +13,30 @@
 
 Unemployment is more than an economic indicator — it functions as an early-warning signal for regional economic stress. When unemployment rises in a county, financial strain compounds quickly: mental health crises increase and preventive care gets skipped as households cut back. This project treats unemployment rate as a **SDOH stress indicator** and forecasts it 1 month ahead using economic features, giving public health planners early warning of demand surges.
 
-The model ingests 10 years of monthly employment, inflation, and labor force data across 11 Massachusetts counties and outputs county-specific unemployment forecasts with SHAP-based explanations of which economic factors are driving stress in each region.
+The model ingests 10 years of monthly data across 11 Massachusetts counties, combining **labor market conditions** (unemployment rate, labor force participation rate, employment counts) with **inflation dynamics** (CPI across all-items, housing, energy, and medical care), and outputs county-specific unemployment forecasts with SHAP-based explanations of which economic factors are driving stress in each region.
+
+---
+
+## Raw Data Schema
+
+Before feature engineering, the merged dataset (`data/processed/with_unemployment_processed.csv`) has the following 10 columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `date` | datetime | Month of observation (e.g. `2015-01-01`) |
+| `region` | string | County identifier (e.g. "Barnstable County") |
+| `unemployment_rate` | float | Monthly unemployment rate (%) — **prediction target** |
+| `labor_force_participation_rate` | float | % of working-age population in the labor force (BLS LAUS) |
+| `employment_count` | int | Total covered employment for the county (BLS QCEW) |
+| `cpi_all_items` | float | CPI-U, All Items — Boston-Cambridge-Newton, MA-NH metro |
+| `cpi_housing` | float | CPI-U, Housing sub-index |
+| `cpi_energy` | float | CPI-U, Energy sub-index |
+| `cpi_medical_care` | float | CPI-U, Medical Care sub-index |
+| `year` | int | Calendar year extracted from `date` |
+
+These 10 raw columns feed into the feature engineering step (see [Feature Engineering Details](#feature-engineering-details)) which expands them into 27 model-ready features per timestep.
+
+> **Known data-quality note:** an early version of the merged CSV had duplicate rows per `(date, region)` pair from a many-to-many join key during the manual merge step. If you're reproducing this pipeline from scratch, verify uniqueness with `df.duplicated(subset=['date','region']).sum()` before proceeding to feature engineering.
 
 ---
 
@@ -66,7 +89,7 @@ All data was manually downloaded from the **U.S. Bureau of Labor Statistics (BLS
 
 ### How the data was collected
 
-#### Employment & Unemployment Data
+#### Employment Data
 1. Go to `bls.gov` → **Data Tools** → **County Employment and Wages (QCEW)**
 2. Select **Massachusetts** → choose each county individually
 3. Select **All Industries**, **All Establishment Sizes**, **Total Covered**
@@ -74,6 +97,11 @@ All data was manually downloaded from the **U.S. Bureau of Labor Statistics (BLS
 5. Repeat for all 11 counties:
    - Barnstable, Berkshire, Bristol, Dukes, Essex
    - Middlesex, Nantucket, Norfolk, Plymouth, Suffolk, Worcester
+
+#### Unemployment Rate & Labor Force Participation
+1. Go to `bls.gov` → **Data Tools** → **Local Area Unemployment Statistics (LAUS)**
+2. Select **Massachusetts** → choose each county individually
+3. Download monthly **unemployment rate** and **labor force participation rate** series for 2014–2024
 
 #### Inflation / CPI Data
 1. Go to `bls.gov` → **Data Tools** → **CPI Databases**
@@ -89,7 +117,7 @@ All data was manually downloaded from the **U.S. Bureau of Labor Statistics (BLS
 - Opened each county Excel file and standardized column names
 - Added a `region` column with the full county identifier
 - Merged all county files into `sdoh_dataset_employment_inflation.csv`
-- Separately downloaded unemployment rate series and merged into `sdoh_dataset_with_unemployment.csv`
+- Separately downloaded unemployment rate and labor force participation rate series and merged into `sdoh_dataset_with_unemployment.csv`
 - Final merge and cleaning was done in `notebooks/analysis.ipynb` → saved as `with_unemployment_processed.csv`
 
 ### Data Collection Flow
@@ -98,13 +126,17 @@ All data was manually downloaded from the **U.S. Bureau of Labor Statistics (BLS
 flowchart TD
     A[bls.gov] --> B{Data Type}
     B -->|Employment| C[QCEW — County Employment\nand Wages]
+    B -->|Unemployment & Labor Force| D2[LAUS — Local Area\nUnemployment Statistics]
     B -->|Inflation| D[CPI-U — Boston Metro\nAll Urban Consumers]
     C --> E[Select Massachusetts\nAll Industries\nAll Establishment Sizes\nTotal Covered]
     E --> F[Download per county\nBarnstable, Berkshire\nBristol, Dukes, Essex\nMiddlesex, Nantucket\nNorfolk, Plymouth\nSuffolk, Worcester]
+    D2 --> F2[unemployment_rate\nlabor_force_participation_rate\nper county, monthly]
     D --> G[Select 4 series\nSA0 — All Items\nSAH — Housing\nSAE — Energy\nSAM — Medical Care]
     F --> H[11 Excel files\n840 rows each\n2015-01-01 to 2024-12-01]
+    F2 --> H2[11 Excel files\nUnemployment + LFPR\n2015-2024]
     G --> I[4 CPI Excel files\nMonthly values\n2015-2024]
     H --> J[Manual merge in Excel\nAdd region column\nStandardize headers]
+    H2 --> J
     I --> J
     J --> K[sdoh_dataset_employment_inflation.csv\nsdoh_dataset_with_unemployment.csv]
 ```
@@ -190,6 +222,8 @@ Run `streamlit run app.py` to launch the interactive dashboard locally, or deplo
 ---
 
 ## Feature Engineering Details
+
+Raw inputs (see [Raw Data Schema](#raw-data-schema)) are expanded into the following engineered features:
 
 | Feature | Description |
 |---------|-------------|
