@@ -36,8 +36,6 @@ Before feature engineering, the merged dataset (`data/processed/with_unemploymen
 
 These 10 raw columns feed into the feature engineering step (see [Feature Engineering Details](#feature-engineering-details)) which expands them into 27 model-ready features per timestep.
 
-> **Known data-quality note:** an early version of the merged CSV had duplicate rows per `(date, region)` pair from a many-to-many join key during the manual merge step. If you're reproducing this pipeline from scratch, verify uniqueness with `df.duplicated(subset=['date','region']).sum()` before proceeding to feature engineering.
-
 ---
 
 ## Results
