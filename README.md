@@ -11,7 +11,7 @@
 
 ## What This Project Does
 
-Unemployment is not just an economic problem — it is a public health crisis. When unemployment rises in a county, emergency room visits spike, mental health crises increase, and preventive care gets skipped. This project treats unemployment rate as a **SDOH stress indicator** and forecasts it 1 month ahead using economic features, giving public health planners early warning of demand surges.
+Unemployment is more than an economic indicator — it functions as an early-warning signal for regional economic stress. When unemployment rises in a county, financial strain compounds quickly: mental health crises increase and preventive care gets skipped as households cut back. This project treats unemployment rate as a **SDOH stress indicator** and forecasts it 1 month ahead using economic features, giving public health planners early warning of demand surges.
 
 The model ingests 10 years of monthly employment, inflation, and labor force data across 11 Massachusetts counties and outputs county-specific unemployment forecasts with SHAP-based explanations of which economic factors are driving stress in each region.
 
@@ -336,30 +336,6 @@ python3 analysis.py
 cd ../..
 streamlit run app.py
 ```
-
----
-
-## Resume Bullets
-
-```
-MA SDOH Economic Stress Forecaster | Python, XGBoost, LSTM, SHAP, Streamlit
-
-• Engineered 27+ features from 10 years of BLS employment/CPI data across
-  11 Massachusetts counties (cyclical time encoding, lag 1/3/6/12,
-  rolling stats, SDOH ratios); per-county chronological 70/15/15 split
-  with scaler fit on train-only to prevent data leakage
-
-• Benchmarked XGBoost vs LSTM against a naive lag-1 persistence baseline
-  (MAE=0.5083 pp); XGBoost achieved MAE=0.0325 pp (15.6x lower than baseline,
-  3x lower than LSTM), confirming gradient boosting's edge on structured tabular
-  time-series at moderate data scale
-
-• Applied SHAP on the held-out test set to identify medical_care_affordability
-  as the strongest leading indicator of unemployment stress — ahead of energy
-  costs and labor force participation rate; deployed per-county Streamlit Cloud
-  dashboard with SHAP waterfall charts explaining individual predictions
-```
-
 ---
 
 ## License
