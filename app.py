@@ -1,190 +1,3 @@
-# import streamlit as st
-# import numpy as np
-# import pandas as pd
-# import pickle
-# import matplotlib.pyplot as plt
-# import shap
-# import os
-
-# # ── Page config ───────────────────────────────────────────────────────────────
-# st.set_page_config(
-#     page_title="MA SDOH Economic Stress Forecaster",
-#     page_icon="📊",
-#     layout="wide"
-# )
-
-# PROCESSED_DIR = "data/processed/"
-
-# # ── Load models and data ──────────────────────────────────────────────────────
-# @st.cache_resource
-# def load_models():
-#     with open(PROCESSED_DIR + "xgb_model.pkl", "rb") as f:
-#         xgb_model = pickle.load(f)
-#     from tensorflow.keras.models import load_model
-    
-#     # Try loading .keras first, fallback to .h5 if that's what your script saved
-#     try:
-#         lstm_model = load_model(PROCESSED_DIR + "er_lstm_model.keras", compile=False)
-#     except:
-#         lstm_model = load_model(PROCESSED_DIR + "er_lstm_model.h5", compile=False)
-        
-#     return xgb_model, lstm_model
-
-# @st.cache_data
-# def load_data():
-#     X_test  = np.load(PROCESSED_DIR + "X_test.npy")
-#     y_test  = np.load(PROCESSED_DIR + "y_test.npy")
-#     with open(PROCESSED_DIR + "feature_columns.pkl", "rb") as f:
-#         feature_cols = pickle.load(f)
-#     df = pd.read_csv("data/processed/with_unemployment_processed.csv")
-#     return X_test, y_test, feature_cols, df
-
-# xgb_model, lstm_model = load_models()
-# X_test, y_test, feature_cols, df = load_data()
-# X_test_2d = X_test.reshape(X_test.shape[0], -1)
-
-# # ── Sidebar ───────────────────────────────────────────────────────────────────
-# st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Flag_of_Massachusetts.svg/320px-Flag_of_Massachusetts.svg.png", width=120)
-# st.sidebar.title("Controls")
-
-# regions = sorted(df['region'].dropna().unique().tolist())
-# selected_region = st.sidebar.selectbox("Select county", regions)
-# selected_model  = st.sidebar.radio("Model", ["XGBoost", "LSTM", "Both"])
-# show_shap       = st.sidebar.checkbox("Show SHAP explainability", value=True)
-
-# st.sidebar.markdown("---")
-# st.sidebar.markdown("**About this project**")
-# st.sidebar.markdown(
-#     "Forecasts unemployment stress using 10 years of SDOH indicators "
-#     "across 14 Massachusetts counties. Built with XGBoost + LSTM comparison "
-#     "and SHAP explainability."
-# )
-
-# # ── Header ────────────────────────────────────────────────────────────────────
-# st.title("MA SDOH Economic Stress Forecaster")
-# st.markdown(
-#     "Predicting county-level unemployment as a **Social Determinants of Health** "
-#     "stress indicator using employment, inflation, and economic data (2014–2024)."
-# )
-# st.markdown("---")
-
-# # ── Row 1: Key metrics ────────────────────────────────────────────────────────
-# from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-
-# y_pred_xgb  = xgb_model.predict(X_test_2d)
-# y_pred_lstm = lstm_model.predict(X_test).flatten()
-
-# col1, col2, col3, col4 = st.columns(4)
-# col1.metric("XGBoost MAE",  f"{mean_absolute_error(y_test, y_pred_xgb):.4f}",  "lower is better")
-# col2.metric("XGBoost R²",   f"{r2_score(y_test, y_pred_xgb):.4f}",             "higher is better")
-# col3.metric("LSTM MAE",     f"{mean_absolute_error(y_test, y_pred_lstm):.4f}", "lower is better")
-# col4.metric("LSTM R²",      f"{r2_score(y_test, y_pred_lstm):.4f}",            "higher is better")
-
-# st.markdown("---")
-
-# # ── Row 2: Forecast chart ─────────────────────────────────────────────────────
-# st.subheader(f"True vs Predicted — {selected_region}")
-
-# region_df = df[df['region'] == selected_region].sort_values('date')
-
-# fig, ax = plt.subplots(figsize=(12, 4))
-# ax.plot(y_test,      label='True',    linewidth=1.8, color='#2C2C2A')
-
-# if selected_model in ["XGBoost", "Both"]:
-#     ax.plot(y_pred_xgb,  label='XGBoost', linestyle='--', alpha=0.85, color='#1D9E75')
-# if selected_model in ["LSTM", "Both"]:
-#     ax.plot(y_pred_lstm, label='LSTM',    linestyle=':',  alpha=0.85, color='#7F77DD')
-
-# ax.set_xlabel("Time Step (test set)")
-# ax.set_ylabel("Unemployment Rate (%)")
-# ax.legend()
-# ax.grid(True, linestyle='--', alpha=0.3)
-# ax.spines[['top', 'right']].set_visible(False)
-# plt.tight_layout()
-# st.pyplot(fig)
-# plt.close()
-
-# # ── Row 3: Model comparison + SHAP side by side ───────────────────────────────
-# left_col, right_col = st.columns(2)
-
-# with left_col:
-#     st.subheader("Model comparison")
-#     comparison_df = pd.DataFrame({
-#         'Model':  ['XGBoost', 'LSTM'],
-#         'MAE':    [mean_absolute_error(y_test, y_pred_xgb),
-#                    mean_absolute_error(y_test, y_pred_lstm)],
-#         'RMSE':   [np.sqrt(mean_squared_error(y_test, y_pred_xgb)),
-#                    np.sqrt(mean_squared_error(y_test, y_pred_lstm))],
-#         'R²':     [r2_score(y_test, y_pred_xgb),
-#                    r2_score(y_test, y_pred_lstm)],
-#     }).set_index('Model').round(4)
-#     st.dataframe(comparison_df, use_container_width=True)
-
-#     fig2, ax2 = plt.subplots(figsize=(5, 3))
-#     x = np.arange(2)
-#     bars = ax2.bar(['XGBoost', 'LSTM'],
-#                    [mean_absolute_error(y_test, y_pred_xgb),
-#                     mean_absolute_error(y_test, y_pred_lstm)],
-#                    color=['#1D9E75', '#7F77DD'], edgecolor='white', alpha=0.85)
-#     ax2.set_ylabel("MAE")
-#     ax2.set_title("MAE Comparison")
-#     ax2.spines[['top', 'right']].set_visible(False)
-#     for bar in bars:
-#         ax2.text(bar.get_x() + bar.get_width()/2,
-#                  bar.get_height() + 0.001,
-#                  f'{bar.get_height():.4f}', ha='center', fontsize=9)
-#     plt.tight_layout()
-#     st.pyplot(fig2)
-#     plt.close()
-
-# with right_col:
-#     st.subheader("SHAP — which SDOH features matter most?")
-#     if show_shap:
-#         with st.spinner("Computing SHAP values ..."):
-#             explainer   = shap.Explainer(xgb_model)
-#             shap_values = explainer(X_test_2d)
-            
-#             # THE SHAP FIX
-#             if X_test_2d.shape[1] > len(feature_cols):
-#                 num_timesteps = X_test_2d.shape[1] // len(feature_cols)
-#                 final_feature_names = []
-#                 for t in range(num_timesteps, 0, -1):
-#                     for col in feature_cols:
-#                         final_feature_names.append(f"{col}_lag{t}")
-#             else:
-#                 final_feature_names = feature_cols
-
-#             fig3, ax3   = plt.subplots(figsize=(6, 5))
-#             shap.summary_plot(
-#                 shap_values, X_test_2d,
-#                 feature_names=final_feature_names,
-#                 max_display=10,
-#                 show=False,
-#                 plot_size=None
-#             )
-#             plt.tight_layout()
-#             st.pyplot(fig3)
-#             plt.close()
-#     else:
-#         st.info("Enable SHAP in the sidebar to see feature importance.")
-
-# # ── Row 4: Raw data preview ───────────────────────────────────────────────────
-# st.markdown("---")
-# with st.expander("View raw data for selected county"):
-#     st.dataframe(
-#         region_df[['date', 'unemployment_rate', 'employment_count',
-#                    'cpi_medical_care', 'cpi_housing', 'cpi_energy']].tail(24),
-#         use_container_width=True
-#     )
-
-# # ── Footer ────────────────────────────────────────────────────────────────────
-# st.markdown("---")
-# st.markdown(
-#     "<small>Data sources: BLS Employment Statistics · BEA CPI Indices · "
-#     "14 Massachusetts counties · 2014–2024 · "
-#     "Built with XGBoost, TensorFlow, SHAP, Streamlit</small>",
-#     unsafe_allow_html=True
-# )
 import streamlit as st
 import numpy as np
 import pickle
@@ -196,7 +9,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from tensorflow.keras.models import load_model
 import shap
 
-# ── Config ─────────────────────────────────────────────────────────────────────
+
 PROCESSED_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'processed')
 
 st.set_page_config(
@@ -204,8 +17,6 @@ st.set_page_config(
     page_icon="📊",
     layout="wide",
 )
-
-# ── Load data (cached) ─────────────────────────────────────────────────────────
 @st.cache_resource
 def load_all():
     X_test       = np.load(os.path.join(PROCESSED_DIR, 'X_test.npy'))
@@ -237,7 +48,7 @@ def get_predictions(_xgb_model, _lstm_model, X_test):
     return y_pred_xgb, y_pred_lstm, X_flat
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+
 def metrics(y_true, y_pred):
     return {
         'MAE':  mean_absolute_error(y_true, y_pred),
@@ -359,7 +170,7 @@ def get_shap_figs(_xgb_model, X_flat, feature_cols):
     return fig_sum, fig_wf
 
 
-# ── Load everything ────────────────────────────────────────────────────────────
+
 with st.spinner("Loading models and data..."):
     X_test, y_test, regions_test, xgb_model, lstm_model, feature_cols, history = load_all()
 
@@ -368,7 +179,7 @@ with st.spinner("Running predictions..."):
 
 counties = sorted(set(regions_test))
 
-# ── Sidebar ────────────────────────────────────────────────────────────────────
+
 st.sidebar.title("🗂 Navigation")
 page = st.sidebar.radio(
     "Go to",
@@ -379,9 +190,7 @@ st.sidebar.markdown(f"**Test samples:** {len(y_test)}")
 st.sidebar.markdown(f"**Counties:** {len(counties)}")
 st.sidebar.markdown(f"**Features:** {len(feature_cols)}")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 1 — Overview
-# ══════════════════════════════════════════════════════════════════════════════
+
 if page == "Overview":
     st.title("📊 SDoH Unemployment Rate Predictor")
     st.markdown("XGBoost vs LSTM comparison across **11 Massachusetts counties** (2015–2024)")
@@ -437,9 +246,7 @@ if page == "Overview":
     st.pyplot(fig_g)
     plt.close()
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 2 — Per-County Analysis
-# ══════════════════════════════════════════════════════════════════════════════
+
 elif page == "Per-County Analysis":
     st.title("🗺 Per-County Analysis")
 
@@ -472,9 +279,7 @@ elif page == "Per-County Analysis":
     st.pyplot(fig_ae)
     plt.close()
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 3 — Residuals & Scatter
-# ══════════════════════════════════════════════════════════════════════════════
+
 elif page == "Residuals & Scatter":
     st.title("📉 Residuals & Scatter Plots")
 
@@ -503,9 +308,7 @@ elif page == "Residuals & Scatter":
                 "counties are concatenated without temporal continuity."
             )
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 4 — LSTM Training History
-# ══════════════════════════════════════════════════════════════════════════════
+
 elif page == "LSTM Training":
     st.title("🧠 LSTM Training History")
 
@@ -523,9 +326,7 @@ elif page == "LSTM Training":
     else:
         st.warning("No training history found at data/processed/history.pkl")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 5 — SHAP
-# ══════════════════════════════════════════════════════════════════════════════
+
 elif page == "SHAP Explainability":
     st.title("🔍 SHAP Feature Explainability (XGBoost)")
     st.info("Computing SHAP values for the first 200 test samples...")
