@@ -11,7 +11,7 @@
 
 ## What This Project Does
 
-Unemployment is not just an economic problem — it is a public health crisis. When unemployment rises in a county, emergency room visits spike, mental health crises increase, and preventive care gets skipped. This project treats unemployment rate as a **SDOH stress indicator** and forecasts it 1 month ahead using economic features, giving public health planners early warning of demand surges.
+Unemployment is more than an economic indicator — it functions as an early-warning signal for regional economic stress. When unemployment rises in a county, financial strain compounds quickly: mental health crises increase and preventive care gets skipped as households cut back. This project treats unemployment rate as a **SDOH stress indicator** and forecasts it 1 month ahead using economic features, giving public health planners early warning of demand surges.
 
 The model ingests 10 years of monthly employment, inflation, and labor force data across 11 Massachusetts counties and outputs county-specific unemployment forecasts with SHAP-based explanations of which economic factors are driving stress in each region.
 
