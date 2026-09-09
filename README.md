@@ -63,7 +63,7 @@ flowchart TD
     A[BLS Website\nbls.gov] -->|Download Excel files\nper county + CPI series| B[Raw Excel Files\n11 counties × employment\n4 CPI series]
     B -->|Manual cleaning\nstandardize columns| C[data/raw/\nsdoh_dataset_employment_inflation.csv\nsdoh_dataset_with_unemployment.csv]
     C -->|notebooks/analysis.ipynb\nmerge + IQR cap + save| D[data/processed/\nwith_unemployment_processed.csv]
-    D -->|data_preprocessing.py| E[Feature Engineering\nlag + rolling + cyclical + ratios]
+    D -->|data_preprocessing.py| E[Feature Engineering\nlag + rolling + cyclical  ratios]
     E -->|36-month sequences\nunscaled| F[X_sequences.npy\ny_target.npy\nregions.npy]
     F -->|model_training.py\nper-county 70/15/15\nscaler fit on train only| G[Training Data\n~6098 samples]
     G -->|Naive persistence| N[Naive lag-1 Baseline\npredict next = current\nMAE=0.5083 RMSE=0.8573]
