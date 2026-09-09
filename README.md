@@ -91,7 +91,7 @@ All data was manually downloaded from the **U.S. Bureau of Labor Statistics (BLS
 1. Go to `bls.gov` → **Data Tools** → **County Employment and Wages (QCEW)**
 2. Select **Massachusetts** → choose each county individually
 3. Select **All Industries**, **All Establishment Sizes**, **Total Covered**
-4. Download as Excel (.xlsx) for years 2014–2024
+4. Download as Excel (.xlsx) for years 2015–2024
 5. Repeat for all 11 counties:
    - Barnstable, Berkshire, Bristol, Dukes, Essex
    - Middlesex, Nantucket, Norfolk, Plymouth, Suffolk, Worcester
