@@ -99,7 +99,7 @@ All data was manually downloaded from the **U.S. Bureau of Labor Statistics (BLS
 #### Unemployment Rate & Labor Force Participation
 1. Go to `bls.gov` → **Data Tools** → **Local Area Unemployment Statistics (LAUS)**
 2. Select **Massachusetts** → choose each county individually
-3. Download monthly **unemployment rate** and **labor force participation rate** series for 2014–2024
+3. Download monthly **unemployment rate** and **labor force participation rate** series for 2015–2024
 
 #### Inflation / CPI Data
 1. Go to `bls.gov` → **Data Tools** → **CPI Databases**
@@ -109,7 +109,7 @@ All data was manually downloaded from the **U.S. Bureau of Labor Statistics (BLS
    - `CUURA103SAH` — Housing
    - `CUURA103SAE` — Energy
    - `CUURA103SAM` — Medical Care
-4. Download as Excel for 2014–2024
+4. Download as Excel for 2015–2024
 
 #### Manual Merging Process
 - Opened each county Excel file and standardized column names
