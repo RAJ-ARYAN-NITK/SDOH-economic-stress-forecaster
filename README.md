@@ -203,7 +203,7 @@ Run `backend/ml/data_preprocessing.py` to:
 Run `backend/ml/model_training.py` to:
 - Split each county **70/15/15 chronologically** (per-county so all 11 counties appear in train, val, and test)
 - Fit `StandardScaler` **on the training split only**, then transform val/test — no leakage from future data
-- Train XGBoost (500 trees, early stopping on val MAE, patience 20 rounds)
+- Train XGBoost (500 trees, early stopping on val MAE, patience 20)
 - Train LSTM (64→32 units, Dropout 0.2, early stopping on val loss, patience 10)
 - Save `xgb_model.pkl`, `er_lstm_model.keras`, `scaler.pkl`, `regions_test.npy`
 
